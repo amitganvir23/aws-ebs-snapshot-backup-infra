@@ -1,0 +1,2 @@
+jenkins_home: /var/lib/jenkins
+jenkins_config_xml: "{{jenkins_home}}/config.xml"

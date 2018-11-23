@@ -1,0 +1,42 @@
+#- include_vars: ../jenkins_master/defaults/variable.yml
+
+- name: Launch Ec2 instance for Jenkins master
+  ec2:
+    key_name: "{{ key }}"
+    group: "{{ security_group}}"
+    instance_type: "{{ instance_type }}"
+    image: "{{ image }}"
+    wait: yes
+    region: "{{ region }}"
+    count: 1
+    monitoring: yes
+    vpc_subnet_id: "{{ subnet_id }}"
+    assign_public_ip: yes
+    instance_tags:
+     Name: "{{ Name_Tag }}"
+    volumes:
+     - device_name: /dev/sdg
+       snapshot: "{{ latest_snap_id }}"
+       volume_type: "gp2"
+       volume_size: "{{ latest_volume_size }}"
+  register: jenkins_ec2_result
+
+- debug: msg="{{jenkins_ec2_result}}"
+
+- name: Add new instances to a host group
+  add_host: name={{ item.1.public_dns_name }} groups=jenkinsmaster broker_id={{ item.0 + 1 }}
+  with_indexed_items: "{{ jenkins_ec2_result.instances }}"
+- name: Wait for SSH to come up
+  wait_for: host={{ item.public_dns_name }} port=22 delay=60 timeout=360 state=started
+  with_items: "{{ jenkins_ec2_result.instances }}"
+- name: Make sure the known hosts file exists
+  file: "path={{ ssh_known_hosts_file }} state=touch"
+- name: Check host name availability
+  shell: "ssh-keygen -f {{ ssh_known_hosts_file }} -F {{ item.public_dns_name }}"
+  with_items: "{{ jenkins_ec2_result.instances }}"
+  register: k_ssh_known_host_results
+  ignore_errors: yes
+- name: Scan the public key
+  shell: "{{ ssh_known_hosts_command}} {{ item.item.public_dns_name }} >> {{ ssh_known_hosts_file }}"
+  with_items: "{{ k_ssh_known_host_results.results }}"
+  when: item.stdout == ""

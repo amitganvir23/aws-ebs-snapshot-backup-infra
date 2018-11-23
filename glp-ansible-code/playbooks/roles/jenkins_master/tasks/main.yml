@@ -1,0 +1,34 @@
+- include_vars: ../jenkins_master/defaults/my_var.yml
+
+## Replacing SMTP setup for bitbucket commit.
+##Check below JENKINS_JAVA_OPTIONS in line: option and compare with original file except content part -Dhudson.tasks.MailSender.SEND_TO_USERS_WITHOUT_READ=true
+
+- name: Checking jenkins smtp java option main config file
+  shell: "grep -e '{{jenkins_java_smtp_option}}' {{jenkins_config}}"
+  ignore_errors: yes
+  register: smtp_result
+
+- name: Replacing new JENKINS_JAVA_OPTIONS with SMTP
+  replace:
+    path: "{{jenkins_config}}"
+    regexp: '(\s+JENKINS_JAVA_OPTIONS=.*)(")$'
+    replace: '\1 {{jenkins_java_smtp_option}}\2'
+    backup: yes
+  when:
+        - smtp_result.rc == 1
+
+- name: Removing old files
+  shell: "rm -rvf {{  jenkins_home }}/plugins/2.89.2 {{  jenkins_home }}/plugins/environment-operator-deployer*"
+
+- name: Adding Custome plugin and config data
+  git:
+    repo: "{{ jenkins_data_bucket_url }}"
+    dest: "{{ jenkins_data_bucket }}"
+    accept_hostkey: yes
+    force: yes
+  become: yes
+  become_user: "{{ username }}"
+
+- name: copying Custome plugin and config data
+  shell: "cp -frv {{ jenkins_data_bucket }}/jenkins-plugins/* {{  jenkins_home }}/plugins; cp -frv {{ jenkins_data_bucket }}/jenkins-config/* {{  jenkins_home }}"
+

@@ -1,0 +1,23 @@
+---
+- name: Create EC2 instances for Jenkins Master with Latest Sanpshot
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars_files:
+    - "group_vars/variables"
+  tasks:
+  roles:
+    - ../glt-ansible-code/playbooks/roles/snapshot_latest
+    - jenkins_master
+
+- name: Updating the changes in Jenkins Master
+  hosts: jenkinsmaster
+  #hosts: ec2-18-188-149-114.us-east-2.compute.amazonaws.com
+  remote_user: ec2-user
+  become: true
+  become_method: sudo
+  gather_facts: no
+  vars_files:
+    - "group_vars/variables"
+  roles:
+    - ../glt-ansible-code/playbooks/roles/jenkins_master_changes

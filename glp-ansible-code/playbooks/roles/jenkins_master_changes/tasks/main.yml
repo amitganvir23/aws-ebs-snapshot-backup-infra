@@ -1,0 +1,91 @@
+
+#---------------------------
+## IP address replaced
+#---------------------------
+- name: Collecting previous Jenkisn Master IP
+  shell: "grep jenkinsHost= {{jenkins_home}}/jobs/*/config.xml|cut -d '=' -f 2|grep '.'|head -n 1"
+  register: old_ip
+
+- name: Checking current Jenkins Master IP
+  shell: "hostname -i"
+  register: new_ip
+
+- name: Updating Jenkins Master private IP in jobs
+  shell: "sed -i 's|{{ old_ip.stdout }}|{{ new_ip.stdout }}|g'  {{jenkins_home}}/jobs/*/config.xml"
+
+- name: Updating Jenkins Master private IP in nodes
+  shell: "sed -i 's|{{ old_ip.stdout }}|{{ new_ip.stdout }}|g'  {{jenkins_home}}/nodes/*/config.xml"
+#---------------------------
+
+
+
+#---------------------------
+# Dynamci slave update in Master config.xml
+#---------------------------
+- name: "Checking Previous Slave REGION Name"
+  shell: "grep '<region>' {{jenkins_config_xml}}|tr '>' ' '|tr '<' ' '|awk '{print $2}' | head -n 1"
+  register: old_region
+
+- name: "Replacing new Slave REGION: {{region}}"
+  replace:
+    path: "{{jenkins_config_xml}}"
+    regexp: '{{old_region.stdout}}'
+    replace: '{{region}}'
+    backup: yes
+
+- name: "Checking Previous Slave AMI Name"
+  shell: "grep ami- {{jenkins_config_xml}}|tr '>' ' '|tr '<' ' '|awk '{print $2}' | head -n 1"
+  register: old_ami
+
+- name: "Replacing new Slave AMI: {{slave_ami}}"
+  replace:
+    path: "{{jenkins_config_xml}}"
+    regexp: '{{old_ami.stdout}}'
+    replace: '{{slave_ami}}'
+    backup: yes
+
+- name: "Checking Previous Slave SubnetID"
+  shell: "grep subnet- {{jenkins_config_xml}}|tr '>' ' '|tr '<' ' '|awk '{print $2}' | head -n 1"
+  register: old_subnet
+
+- name: "Replacing new SubnetID: {{slave_subnet}}"
+  replace:
+    path: "{{jenkins_config_xml}}"
+    regexp: '{{old_subnet.stdout}}'
+    replace: '{{slave_subnet}}'
+    backup: yes
+
+- name: "Checking Previous Slave ecurity Group"
+  shell: "grep '<securityGroups>' {{jenkins_config_xml}}|tr '>' ' '|tr '<' ' '|awk '{print $2}' | head -n 1"
+  register: old_sg
+
+- name: "Replacing new Slave Security Group: {{slave_sg}}"
+  replace:
+    path: "{{jenkins_config_xml}}"
+    regexp: '{{old_sg.stdout}}'
+    replace: '{{slave_sg}}'
+    backup: yes
+
+- name: "Checking Previous Slave IAM Role"
+  shell: "grep '<iamInstanceProfile>' {{jenkins_config_xml}}|tr '>' ' '|tr '<' ' '|awk '{print $2}' |grep 'arn:aws:iam:' | head -n 1"
+  register: old_iam
+
+- name: "Replacing new Slave IAM Role: {{slave_iam}}"
+  replace:
+    path: "{{jenkins_config_xml}}"
+    regexp: '{{old_iam.stdout}}'
+    replace: '{{slave_iam}}'
+    backup: yes
+
+- name: "Checking Previous Slave Tag name"
+  shell: "grep '<value>' {{jenkins_config_xml}}|tr '>' ' '|tr '<' ' '|awk '{print $2}' | grep Jenkins | grep -i dynamic | head -n 1"
+  register: old_tag
+
+- name: "Replacing new Slave Tag name: {{slave_tag}}"
+  replace:
+    path: "{{jenkins_config_xml}}"
+    regexp: '{{old_tag.stdout}}'
+    replace: '{{slave_tag}}'
+    backup: yes
+
+#---------------------------

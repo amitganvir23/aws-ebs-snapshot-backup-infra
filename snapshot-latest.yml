@@ -1,0 +1,67 @@
+---
+- hosts: localhost
+  gather_facts: yes
+  vars:
+     - REGION: us-east-2
+     - Tag_Value_Check: "SNAPSHOT"
+
+  tasks:
+
+## Colleccting all snapshot details from region selected
+  - name: Checking all Jenkins Master snapshot details
+    ec2_snapshot_facts:
+      region: "{{REGION}}"
+      filters: 
+         "tag:JENKINS_MASTER": '{{ Tag_Value_Check }}'
+    register: all_snap_result
+
+## Set variable if DATE variable is define
+  - set_fact:
+       Curret_Snap_date: "{{SNAP_DATE}}"
+    when: SNAP_DATE is defined
+
+## Collecting latest date of sanphsot
+  - name: Collecting latest snapshots date
+    shell: "echo '{{all_snap_result}}' | tr -d 'u' | tr ',' '\n' | grep -w DATE|tr -d 'u'|tr -d ','|sed 's/ //g'|cut -d ':' -f 3|tr -d '\"'|sort|tail -n 1"
+    register: snap_latest_date
+
+## Set variable if DATE variable is not define and it will select latest snapshot date
+  - set_fact:
+       Curret_Snap_date: "{{ snap_latest_date.stdout }}"
+    when: SNAP_DATE is undefined
+
+  - name: Checking latest snapshot details
+    ec2_snapshot_facts:
+      region: "{{REGION}}"
+      filters: 
+         "tag:DATE": '{{ Curret_Snap_date }}'
+    register: current_snap_result
+
+  - name: Filter snapshot id from the result
+    shell: "echo '{{current_snap_result.snapshots}}' | tr -d 'u' |tr ',' '\n' |grep -w snapshot_id | tr -d 'u'|tr -d ','|sed 's/ //g'|cut -d ':' -f 2"
+    register: snap_id_filter
+
+  - name: Filter Volume size from the result
+    shell: "echo '{{current_snap_result.snapshots}}' | tr -d 'u' |tr ',' '\n' |grep -w volme_size | tr -d 'u'|tr -d ','|sed 's/ //g'|cut -d ':' -f 2"
+    register: volume_size_filter
+
+  - debug: "msg={{ snap_id_filter }}"
+
+
+## Set variable for the snap id if DATE variable is set
+  - set_fact:
+       latest_snap_id: "{{ snap_id_filter.stdout}}"
+       latest_volume_size: "{{ volume_size_filter.stdout}}"
+       #latest_snap_id: "{{ current_snap_result.snapshots |map(attribute='snapshot_id') | list}}"
+
+## Simply print message if snapid found for that date
+  - debug: msg="Latest Snapshot ID Found:{{latest_snap_id}} with Volume Sizie:{{latest_volume_size}} for Date:{{Curret_Snap_date}}"
+    when: latest_snap_id != ""
+
+  - name: deploy code
+    shell: "echo {{latest_snap_id}}"
+    when: latest_snap_id != ""
+
+## TO print message if snapid not found
+  - debug: msg="The Snapshot ID is empty or not found:{{Curret_Snap_date}}"
+    failed_when: latest_snap_id  == ""

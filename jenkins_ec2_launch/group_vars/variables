@@ -1,0 +1,40 @@
+#----------------------------
+# Common Variable everywhere
+#----------------------------
+region: us-east-2
+#az: us-east-2b
+
+#----------------------------
+# ---------------------------
+# For Jenkins Maser EC2
+# ---------------------------
+
+image: ami-31ae9754
+instance_type: t2.medium
+subnet_id: subnet-da38e6a0
+key: terraform-support-keys
+security_group: jenkins-master-sg
+Name_Tag: Jenkins_Master_NEW
+#----------------------------
+
+# ---------------------------
+# SSH
+# ---------------------------
+ssh_known_hosts_command: "ssh-keyscan -H -T 10"
+ssh_known_hosts_file: "/root/.ssh/known_hosts"
+
+## EC2 Private Key Path of Local
+#private_key: /root/.ssh/terraform-private-key
+ansible_ssh_private_key_file: /root/.ssh/terraform-private-key
+# ---------------------------
+
+
+# ---------------------------
+# SSH
+# ---------------------------
+slave_ami: ami-39370e5c
+slave_subnet: subnet-283de352
+slave_sg: jenkins-slave-sg
+slave_iam: arn:aws:iam::953030164212:instance-profile/jenkins_profile-supporting
+slave_tag: JenkinsDynamic-04-July
+# ---------------------------
